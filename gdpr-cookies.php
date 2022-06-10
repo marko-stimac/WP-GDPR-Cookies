@@ -17,4 +17,4 @@ require_once 'includes/class-frontend.php';
 
 new Backend();
 $cookie_notice = new Frontend();
-add_shortcode('cookie-notice', array($cookie_notice, 'showComponent'));
+add_action('wp_footer', array($cookie_notice, 'showComponent'));

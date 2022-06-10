@@ -8,17 +8,42 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	);
 
+	var btnTriggerCookiePolicy = document.getElementById(
+		'js-show-cookie-policy'
+	);
+	if (btnTriggerCookiePolicy) {
+		btnTriggerCookiePolicy.addEventListener('click', function () {
+			cookieModal.show();
+			document
+				.getElementById('js-cookie-notice-popup')
+				.classList.remove('ms-remove');
+		});
+	}
+
 	function allowAnalyticsCookie() {
-		Cookies.set('gdpr-analytics', 'Accepted', { expires: 365 * 5 });
+		Cookies.set('gdpr-analytics', 'Accepted', { expires: 365 * 1 });
 	}
 	function allowMarketingCookie() {
-		Cookies.set('gdpr-marketing', 'Accepted', { expires: 365 * 5 });
+		Cookies.set('gdpr-marketing', 'Accepted', { expires: 365 * 1 });
 	}
 	function allowComplianceCookie() {
-		Cookies.set('gdpr-compliance', 'Accepted', { expires: 365 * 5 }); // da mu se popup više ne prikazuje
+		Cookies.set('gdpr-compliance', 'Accepted', { expires: 365 * 1 }); // da mu se popup više ne prikazuje
 	}
 	function removeAnalyticsCookie() {
 		Cookies.remove('gdpr-analytics');
+
+		var cookies = document.cookie.split(';');
+		for (var i = 0; i < cookies.length; i++) {
+			var cookie = cookies[i];
+			var eqPos = cookie.indexOf('=');
+			var name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+			//console.log('Briše se ', name, name.trim().startsWith('_ga', 0));
+			// Obriši kolačiće koji počinju s "_ga"
+			if (name.trim().startsWith('_ga', 0)) {
+				deleteCookieByName(name);
+				deleteCookieByName(name.trim());
+			}
+		}
 	}
 	function removeMarketingCookie() {
 		Cookies.remove('gdpr-marketing');
@@ -26,6 +51,28 @@ document.addEventListener('DOMContentLoaded', function () {
 	function triggerReload() {
 		window.location.reload();
 	}
+	// briše kolačić tako da ga postavi na prošlo vrijeme
+	function deleteCookieByName(cookieName) {
+		document.cookie =
+			cookieName +
+			'=;' +
+			'expires=Thu, 01-Jan-1970 00:00:01 GMT;' +
+			'path=' +
+			'/;' +
+			'domain=' +
+			window.location.host +
+			';' +
+			'secure=;';
+		//console.log('Deleting... ', cookieName);
+	}
+
+	// Modal - prihvati sve
+	var btnModalSaveChanges = document.getElementById(
+		'js-modal-btn-save-changes'
+	);
+	btnModalSaveChanges.addEventListener('click', function () {
+		triggerReload();
+	});
 
 	// Modal - prihvati sve
 	var btnModalAllowAllCookies = document.getElementById(
@@ -57,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		var analyticsCookie = inputModalAllowAnalyticsCookies.checked;
 		analyticsCookie ? allowAnalyticsCookie() : removeAnalyticsCookie();
 		allowComplianceCookie();
-		btnModalAllowRequiredCookies.removeAttribute('disabled');
+		btnModalSaveChanges.removeAttribute('disabled');
 	});
 
 	// Modal input - prihvati marketing
@@ -68,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		var marketingCookie = inputModalAllowMarketingCookies.checked;
 		marketingCookie ? allowMarketingCookie() : removeMarketingCookie();
 		allowComplianceCookie();
-		btnModalAllowRequiredCookies.removeAttribute('disabled');
+		btnModalSaveChanges.removeAttribute('disabled');
 	});
 
 	// Footer - prihvati sve
@@ -118,11 +165,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		jQuery.ajax({
 			data: {
 				action: 'get_scripts',
+				cookies_types: {
+					'gdpr-analytics': Cookies.get('gdpr-analytics'),
+					'gdpr-marketing': Cookies.get('gdpr-marketing'),
+				},
 			},
 			type: 'POST',
 			url: ms_cookies.url,
 			success: function (response_code) {
-				console.log(response_code);
+				//console.log(response_code);
 				var data = JSON.parse(response_code);
 				data.forEach((element) => {
 					if (element.url) {
@@ -130,6 +181,7 @@ document.addEventListener('DOMContentLoaded', function () {
 						script.src = element.url;
 						document.head.appendChild(script);
 					}
+
 					if (element.kod) {
 						var script = document.createElement('script');
 						script.text = element.kod;

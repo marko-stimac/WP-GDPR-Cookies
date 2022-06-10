@@ -16,6 +16,7 @@ class Frontend
 		add_action('wp_enqueue_scripts', array($this, 'register_scripts'));
 		add_action('wp_ajax_get_scripts', array($this, 'get_scripts'));
 		add_action('wp_ajax_nopriv_get_scripts', array($this, 'get_scripts'));
+		add_shortcode('btn-cookie-policy', array($this, 'register_shortcode_btn_cookie_policy_trigger'));
 	}
 
 	// Register general scripts and styles
@@ -23,8 +24,8 @@ class Frontend
 	{
 		wp_enqueue_style('cookie-styles', plugins_url('/assets/style.css', __DIR__));
 
-		wp_register_script('js-cookie', plugins_url('/assets/js/vendor/js.cookie.js', __DIR__), array('jquery'), THEME_VERSION, true);
-		wp_register_script('js-cookie-main', plugins_url('/assets/js/main.js', __DIR__), array('jquery', 'js-cookie'), THEME_VERSION, true);
+		wp_register_script('js-cookie', plugins_url('/assets/js/vendor/js.cookie.js', __DIR__), array('jquery', 'bootstrap'), THEME_VERSION, true);
+		wp_register_script('js-cookie-main', plugins_url('/assets/js/main.js', __DIR__), array('jquery', 'bootstrap', 'js-cookie'), THEME_VERSION, true);
 		wp_enqueue_script('js-cookie-main');
 		wp_localize_script(
 			'js-cookie-main',
@@ -40,24 +41,29 @@ class Frontend
 
 		$data = [];
 
-		//$data = array(get_field('featured_description', 32));
-		if (have_rows('analiticki_kolacici', 'option')) :
-			while (have_rows('analiticki_kolacici', 'option')) : the_row();
-				$data[] = array(
-					'url' => get_sub_field('analiticki_kolacici_url'),
-					'kod' => get_sub_field('analiticki_kolacici_kod')
-				);
-			endwhile;
-		endif;
+		$cookie_types = $_POST['cookies_types'];
 
-		if (have_rows('marketinski_kolacici', 'option')) :
-			while (have_rows('marketinski_kolacici', 'option')) : the_row();
-				$data[] = array(
-					'url' => get_sub_field('marketinski_kolacici_url'),
-					'kod' => get_sub_field('marketinski_kolacici_kod')
-				);
-			endwhile;
-		endif;
+		if ($cookie_types['gdpr-analytics'] === 'Accepted') {
+			if (have_rows('analiticki_kolacici', 'option')) :
+				while (have_rows('analiticki_kolacici', 'option')) : the_row();
+					$data[] = array(
+						'url' => get_sub_field('analiticki_kolacici_url'),
+						'kod' => get_sub_field('analiticki_kolacici_kod')
+					);
+				endwhile;
+			endif;
+		}
+
+		if ($cookie_types['gdpr-marketing'] === 'Accepted') {
+			if (have_rows('marketinski_kolacici', 'option')) :
+				while (have_rows('marketinski_kolacici', 'option')) : the_row();
+					$data[] = array(
+						'url' => get_sub_field('marketinski_kolacici_url'),
+						'kod' => get_sub_field('marketinski_kolacici_kod')
+					);
+				endwhile;
+			endif;
+		}
 
 		echo json_encode($data);
 
@@ -65,7 +71,7 @@ class Frontend
 	}
 
 	// Retrieve data for maps and pass it to JS
-	public function showComponent($atts, $content)
+	public function showComponent()
 	{
 ?>
 
@@ -86,7 +92,7 @@ class Frontend
 					<div class="modal-body-in">
 						<div class="modal-left relative">
 							<div class="modal-logo mb-4">
-								{logo}
+								<!-- logo -->
 							</div>
 							<div class="nav flex-column nav-pills me-3" id="v-pills-tab" role="tablist" aria-orientation="vertical">
 								<button class="btn nav-link active" id="v-pills-general-tab" data-bs-toggle="pill" data-bs-target="#v-pills-general" type="button" role="tab" aria-controls="v-pills-general" aria-selected="true">
@@ -149,7 +155,7 @@ class Frontend
 
 				</div>
 				<div class="modal-footer">
-					<button id="js-modal-btn-accept-required" type="button" class="btn btn-primary" disabled><?php _e('Spremi promjene', 'ms'); ?></button>
+					<button id="js-modal-btn-save-changes" type="button" class="btn btn-primary" disabled><?php _e('Spremi promjene', 'ms'); ?></button>
 					<button id="js-modal-btn-allow-all" type="button" class="btn btn-primary"><?php _e('Omogući sve', 'ms'); ?></button>
 					<button id="js-modal-btn-accept-required" type="button" class="btn btn-primary"><?php _e('Omogući samo neophodno', 'ms'); ?></button>
 				</div>
@@ -179,5 +185,19 @@ class Frontend
 </div>
 
 <?php
+	}
+
+
+	public function register_shortcode_btn_cookie_policy_trigger()
+	{
+		ob_start();
+	?>
+
+<button id="js-show-cookie-policy" class="btn-trigger-cookie-policy">
+	<?php _e('Privole za kolačiće', 'ms'); ?>
+</button>
+
+<?php
+		return ob_get_clean();
 	}
 }
